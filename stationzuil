@@ -1,0 +1,355 @@
+from tkinter import *
+import psycopg2
+from tkinter.messagebox import showerror,showinfo
+import datetime
+import tkinter as tk
+import os
+import requests
+import json
+import urllib.request
+global invoer1
+global invoer2
+global invoer3
+
+# Dit is de connectie van de DB
+con = psycopg2.connect(
+    host = 'localhost',
+    database = 'projectA',
+    user = 'postgres',
+    password = 'Kaas@12345')
+
+# dit houdt de klant anoniem
+def Homepagina():
+    global invoer1
+    global invoer2
+    global main
+    global mededeling1
+    global mededeling2
+    global mededeling3
+    global datum
+    global tijd
+    global bericht
+    global randomlijst
+    global naammededeling
+    global cur
+    global anoniem
+    global naam
+    main = Tk()
+    main.geometry("400x400")
+    main.title('NS station')
+    main.configure(background='grey')
+
+    cur = con.cursor()
+    datum = datetime.datetime.now().strftime('%Y-%m-%d')
+    tijd = datetime.datetime.now().strftime('%H:%M:%S')
+
+    canvas = Canvas(main, width=80, height=80, background='green')
+    canvas.pack()
+
+    etiket1 = Label(master=main, text='uw naam aub (leeglaten als u anoniem wil blijven):', height=2, background='green')
+    etiket1.pack()
+
+    invoer1 = Entry(master=main, width=50)
+    invoer1.pack(padx=10, pady=10)
+
+    bericht1 = invoer1.get()
+
+    etiket2 = Label(master=main, text='hoe heeft uw de ns ervaren? (max 140 karakters):', height=2,
+                   background='green')
+    etiket2.pack()
+
+    invoer2 = Entry(master=main, width=50)
+    invoer2.pack(padx=10, pady=10)
+
+
+    bericht2 = invoer2.get()
+
+    knop = Button(master=main, text='Versturen', background='green', foreground='black', command=codes)
+    knop.place(x=530, y=320)
+
+    knop = Button(master=main, text='Inloggen als moderator', background='green', foreground='black', command=inloggen)
+    knop.place(x=610, y=320)
+
+    bericht3 = invoer2.get()
+
+    main.mainloop()
+
+# loginscherm voor de moderators
+def inloggen():
+    global invoer3
+    main = Tk()
+    main.geometry("300x300")
+    main.title('NS Moderator login')
+
+    def toonLoginFrame():
+        hoofdframe.pack_forget()
+        loginframe.pack()
+
+    def toonHoofdFrame():
+        loginframe.pack_forget()
+        hoofdframe.pack()
+
+    def login():
+
+        if invoer3.get() == "ModeratorSalah":
+            toonHoofdFrame()
+
+        elif invoer3.get() == "ModeratorAbderrahim":
+            toonHoofdFrame()
+
+        else:
+            bericht = 'Foutief!'
+            showerror(title='ERROR', message=bericht)
+
+
+    etiket2 = Label(master=main, text='Voer hier de naam van de moderator in:', height=2,
+                   background='green')
+    etiket2.pack()
+    loginframe = Frame(master=main)
+    loginframe.pack(fill="both", expand=True)
+    invoer3 = Entry(master=loginframe)
+    invoer3.pack(padx=20, pady=20)
+    inlogknop = Button(master=loginframe, text='login', command= login, background= 'green', foreground= 'black')
+    inlogknop.pack(padx=20, pady=20)
+
+    hoofdframe = Frame(master=main)
+    hoofdframe.pack(fill="both", expand=True)
+    terugknop = Button(master=hoofdframe, text='alle berichten tonen', background='green',foreground='black',command = Moderator )
+    terugknop.pack(padx=20, pady=20)
+
+    toonLoginFrame()
+    main.mainloop()
+
+
+# h#hier wordt het ingevoerde bericht naar het bestand wordt verzonden en
+def Ingevoerd():
+    if invoer2.get() == '':
+        bericht = 'Uw recensie bevat geen inhoud!'
+        showerror(title='ERROR', message=bericht)
+        main.mainloop()
+    else:
+        sendRecensie()
+        VerstuurTekst()
+
+# dit zorgt er voor dat er een beoordeling gegeven kan worden.
+def verstuurdTwitter():
+    bericht = ' uw recensie is ontvangen'
+    showinfo(title=':)', message=bericht)
+
+# dit beoordeelt de beoordelingen.
+def Moderator():
+    global main1
+
+    bestandsgrootte = os.path.getsize("Reviews Moderator.txt")
+    if bestandsgrootte == 0:
+        bericht = 'op dit moment zijn er geen berichten.'
+        showerror(title='NS Melding', message=bericht)
+
+    else:
+        main1 = Tk()
+        main1.geometry("700x270")
+        main1.title('NS Moderator')
+        main1.configure(background='grey')
+
+        with open("Reviews Moderator.txt", "r") as f:
+            Label(main1, background='green', height=7, text=f.read()).pack()
+
+        button = Button(master=main1, text='   afkeuren   ', background='green', foreground='black',
+                        command=Goedkeuringen)
+        button.place(x=140, y=200)
+
+        button = Button(master=main1, text='   goedkeuren   ', background='green', foreground='black', command=Afkeuringen)
+        button.place(x=270, y=200)
+
+        button = Button(master=main1, text='   herlaad berichten   ', background='green', foreground='black',
+                        command=herlaad)
+        button.place(x=380, y=200)
+
+    main1.mainloop()
+
+# dit maakt het mogelijk om een reden in te voeren
+def Afkeuren():
+    global invoer4
+    global root2
+
+    root2 = Tk()
+    root2.geometry("500x270")
+    root2.title('NS Moderator')
+    root2.configure(background='green')
+
+    etiket3 = Label(master=root2, text='Wat zou de reden kunnen zijn?:', height=2,
+                   background='green')
+    etiket3.pack()
+
+    invoer4 = Entry(master=root2, width=50)
+    invoer4.pack(padx=10, pady=10)
+
+    knop = Button(master=root2, text='   OK   ', background='green', foreground='black', command= AfgekeurdRedenDB)
+    knop.place(x=140, y=200)
+    root2.mainloop()
+
+def Afkeuringen():
+    Afkeuren()
+
+# dit maakt de goedkeuring van de recensies mogelijk
+def Goedkeuren():
+    with open('Reviews Moderator.txt', 'r') as fin:
+        lines = fin.readlines()
+    with open('Reviews Moderator.txt', 'w') as fin:
+        for number, line in enumerate(lines):
+            if number not in [0]:
+                fin.write(line)
+def Goedkeuringen():
+    Goedkeuren()
+
+
+# hier kunnnen de moderators berichten afkeuren
+def AfgekeurdRedenDB():
+    global cur
+    global invoer2
+    global invoer1
+    Anoniem()
+    if invoer3.get() == "ModeratorSalah":
+        postgres_insert = """ INSERT INTO bericht(Datum, Tijd, Keuring, Reden, Bericht, Reizigernaam, Moderator_id_2) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+        variabele_insert = (datum, tijd, 'goedgekeurd', invoer4.get(), invoer2.get() , naam, '1001')
+        cur.execute(postgres_insert, variabele_insert)
+        con.commit()
+
+    if invoer3.get() == "ModeratorAbderrahim":
+        postgres_insert = """ INSERT INTO bericht(Datum, Tijd, Keuring, Reden, Bericht, Reizigernaam, Moderator_id_2) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+        variabele_insert = (datum, tijd, 'goedgekeurd', invoer4.get(), invoer2.get() , naam, '1002')
+        cur.execute(postgres_insert, variabele_insert)
+        con.commit()
+
+
+# dit zorgt ervoor dat recensie in de file komen.
+def VerstuurTekst():
+    global randomlijst
+    Anoniem()
+    bestand = open('Reviews Moderator.txt', 'a')
+    outputMessage ='Datum: ' + datum +'  ;  '+ 'Tijd: ' + tijd +'  ;  ' + 'bericht: ' + invoer2.get() + '  ;  '  +  'van: ' + naam + ('\n')
+    bestand.write(outputMessage)
+    bestand.close()
+
+#hier wordt de melding getoond.
+def sendRecensie():
+    bericht = 'uw recensie is succesvol ontvangen.'
+    showinfo(title='NS Melding', message=bericht)
+
+#hier vindt de controle op het aantal karakters plaats.
+def lenghtAndsendtekst():
+    if len(invoer2.get()) > 140:
+        bericht = 'meer dan 140 karakters is niet toegestaan!'
+        showerror(title='ERROR', message=bericht)
+        main.mainloop()
+def codes():
+    lenghtAndsendtekst()
+    Ingevoerd()
+
+# mocht er geen naam worden ingevuld zorgt dit voor de anonimiteit van de klant
+def Anoniem():
+    global naam
+    naam = invoer1.get()
+    if naam.rstrip() == "":
+        naam = "Anoniem"
+
+# dit is om de herlaadknop te laten functioneren
+def herlaad():
+    main1.destroy()
+    Moderator()
+
+# Dit zorgt ervoor dat er geen recensie wordt gegeven, en vervolgens treed er een foutmelding op
+def Geenrecensie():
+    if invoer2.get() == '':
+        bericht = 'U moet eerst een recensie invoeren!'
+        showerror(title='ERROR', message=bericht)
+        main.mainloop()
+#######
+
+def weerhandelaar():
+    l_l = locatie()
+    keys = "515f8ad1bc74d5a4efd7b3eb764ef827"
+    latitude = str(l_l[0])
+    longitude = str(l_l[1])
+    url = "https://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&units=metric" % (latitude, longitude, keys)
+    reactie = requests.get(url)
+    data = json.loads(reactie.text)
+    weer = data["main"]
+    temperatuur = weer["temp"]
+    voeltals = weer["feels_like"]
+    vocht = weer["humidity"]
+    return temperatuur, voeltals, vocht, l_l[2], l_l[3]
+
+
+def locatie():
+    public_IP = requests.get("https://www.wikipedia.org").headers["X-Client-IP"]
+    token = "0f736d1d1b245624aa1455ed30ee8be9"
+    api = "http://api.ipapi.com/" + public_IP + "?access_key=" + token + ""
+    result = urllib.request.urlopen(api).read()
+    result = result.decode()
+    result = json.loads(result)
+    latitude = result["latitude"]
+    longitude = result["longitude"]
+    provincie = result["region_name"]
+    land = result["country_name"]
+    return latitude, longitude, provincie, land
+
+weerhandelaar()
+
+#het creëren van de GUI ne de eigenschappen van GUI
+main = tk.Tk()
+main.title("stationscherm")
+main.configure(background='white')
+main.geometry("1000x500")
+main.resizable(False, False)
+
+
+def berichtenopscherm():
+    my_conn = con.cursor()
+    my_conn.execute("SELECT bericht.Datum, bericht.Tijd, bericht.Reizigernaam, bericht.Bericht FROM bericht WHERE keuring='goedgekeurd'")
+    i = 0
+    for bericht in my_conn:
+        for j in range(len(bericht)):
+            e = Entry(main, width=255, fg='')
+            e.place(x=500, y=100)
+            berichtentekst.config(text="reizigers berichten")
+            onderberichtentekst.config(text="Naam reiziger:_________schreef: ")
+            e.insert(END, bericht[j])
+            i = i + 1
+
+
+berichtentekst = tk.Label(main, text="", bg="green", fg="grey", font=("Courier bold", 33))
+berichtentekst.place(x=500, y=10)
+onderberichtentekst = tk.Label(main, text="", bg="green", fg="grey", font=("Courier bold", 12))
+onderberichtentekst.place(x=500, y=70)
+
+def stationscherm():
+    weerData = weerhandelaar()
+    temperatuur = str(weerData[0])
+    gevoel = str(weerData[1])
+    vocht = str(weerData[2])
+    place = str(weerData[3])
+    country = str(weerData[4])
+    fbtekst.config(text="Weerbericht")
+    feedbacktekst.config(text="Het is momenteel " + temperatuur + ", maar het voelt als \n" + gevoel + ", met een luchtvochtigheid van " + vocht + "%", justify='left')
+    naamtekst.config(text=place)
+    datumtekst.config(text=country)
+
+#Labels
+fbtekst = tk.Label(main, text="", bg="green", fg="white", font=("Courier bold", 33))
+fbtekst.place(x=48, y=10)
+feedbacktekst = tk.Label(main, text="", bg="green", fg="white", font=("Courier bold", 12))
+feedbacktekst.place(x=48, y=80)
+naamtekst = tk.Label(main, text="", bg="green", fg="white", font=("Courier bold", 12))
+naamtekst.place(x=48, y=150)
+datumtekst = tk.Label(main, text="", bg="green", fg="white", font=("Courier bold", 12))
+datumtekst.place(x=48, y=170)
+
+berichtenopscherm()
+stationscherm()
+main.mainloop()
+
+
+
+
+Homepagina()
